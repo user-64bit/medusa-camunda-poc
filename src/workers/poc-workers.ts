@@ -1,5 +1,5 @@
 import { Camunda8 } from "@camunda8/sdk";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 
 // Initialize Camunda8 SDK
 const camunda = new Camunda8({
@@ -15,29 +15,95 @@ const client = camunda.getZeebeGrpcApiClient();
 
 const MEDUSA_URL = process.env.MEDUSA_BACKEND_URL || "http://localhost:9000";
 
+// Helper function to update Medusa with retries
+async function updateMedusa(
+    orderId: string,
+    status: string,
+    message: string,
+    retries = 3
+): Promise<void> {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            await axios.post(
+                `${MEDUSA_URL}/demo`,
+                { orderId, status, message },
+                { timeout: 5000 }
+            );
+            console.log(`📝 Updated Medusa: ${orderId} → ${status}`);
+            return;
+        } catch (error) {
+            const isLastAttempt = attempt === retries;
+
+            if (error instanceof AxiosError) {
+                console.warn(
+                    `⚠️ Failed to update Medusa (attempt ${attempt}/${retries}):`,
+                    {
+                        orderId,
+                        status,
+                        error: error.message,
+                        code: error.code,
+                        responseStatus: error.response?.status,
+                    }
+                );
+            } else {
+                console.warn(
+                    `⚠️ Failed to update Medusa (attempt ${attempt}/${retries}):`,
+                    error
+                );
+            }
+
+            if (isLastAttempt) {
+                throw error;
+            }
+
+            // Exponential backoff: 1s, 2s, 4s
+            await new Promise((resolve) =>
+                setTimeout(resolve, Math.pow(2, attempt - 1) * 1000)
+            );
+        }
+    }
+}
+
 // Worker 1: Verify Payment
 client.createWorker({
     taskType: "verify-payment",
     taskHandler: async (job) => {
-        const { orderId } = job.variables;
-        console.log(`💳 Verifying payment for order: ${orderId}`);
+        const { orderId } = job.variables as { orderId: string };
+        console.log(`💳 [${String(job.key)}] Verifying payment for order: ${orderId}`);
 
-        // Simulate payment verification
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        try {
+            // Simulate payment verification
+            await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        // Update MedusaJS
-        await axios.post(`${MEDUSA_URL}/demo`, {
-            orderId,
-            status: "payment_verified",
-            message: "Payment verified successfully",
-        });
+            // Update MedusaJS
+            await updateMedusa(
+                orderId,
+                "payment_verified",
+                "Payment verified successfully"
+            );
 
-        console.log(`✅ Payment verified: ${orderId}`);
+            console.log(`✅ [${String(job.key)}] Payment verified: ${orderId}`);
 
-        return job.complete({
-            paymentVerified: true,
-            verifiedAt: new Date().toISOString(),
-        });
+            return job.complete({
+                paymentVerified: true,
+                verifiedAt: new Date().toISOString(),
+            });
+        } catch (error) {
+            console.error(
+                `❌ [${String(job.key)}] Payment verification failed:`,
+                {
+                    orderId,
+                    error: error instanceof Error ? error.message : String(error),
+                }
+            );
+
+            return job.fail({
+                errorMessage:
+                    error instanceof Error ? error.message : "Payment verification failed",
+                retries: 3,
+                retryBackOff: 5000, // 5 seconds
+            });
+        }
     },
 });
 
@@ -45,26 +111,43 @@ client.createWorker({
 client.createWorker({
     taskType: "reserve-inventory",
     taskHandler: async (job) => {
-        const { orderId } = job.variables;
-        console.log(`📦 Reserving inventory for order: ${orderId}`);
+        const { orderId } = job.variables as { orderId: string };
+        console.log(`📦 [${String(job.key)}] Reserving inventory for order: ${orderId}`);
 
-        // Simulate inventory reservation
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        try {
+            // Simulate inventory reservation
+            await new Promise((resolve) => setTimeout(resolve, 3000));
 
-        // Update MedusaJS
-        await axios.post(`${MEDUSA_URL}/demo`, {
-            orderId,
-            status: "inventory_reserved",
-            message: "Inventory reserved at Mumbai warehouse",
-        });
+            // Update MedusaJS
+            await updateMedusa(
+                orderId,
+                "inventory_reserved",
+                "Inventory reserved at Mumbai warehouse"
+            );
 
-        console.log(`✅ Inventory reserved: ${orderId}`);
+            console.log(`✅ [${String(job.key)}] Inventory reserved: ${orderId}`);
 
-        return job.complete({
-            inventoryReserved: true,
-            warehouse: "Mumbai",
-            reservedAt: new Date().toISOString(),
-        });
+            return job.complete({
+                inventoryReserved: true,
+                warehouse: "Mumbai",
+                reservedAt: new Date().toISOString(),
+            });
+        } catch (error) {
+            console.error(
+                `❌ [${String(job.key)}] Inventory reservation failed:`,
+                {
+                    orderId,
+                    error: error instanceof Error ? error.message : String(error),
+                }
+            );
+
+            return job.fail({
+                errorMessage:
+                    error instanceof Error ? error.message : "Inventory reservation failed",
+                retries: 3,
+                retryBackOff: 5000,
+            });
+        }
     },
 });
 
@@ -72,27 +155,46 @@ client.createWorker({
 client.createWorker({
     taskType: "send-notification",
     taskHandler: async (job) => {
-        const { orderId } = job.variables;
-        console.log(`📧 Sending notification for order: ${orderId}`);
+        const { orderId } = job.variables as { orderId: string };
+        console.log(`📧 [${String(job.key)}] Sending notification for order: ${orderId}`);
 
-        // Simulate email sending
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        try {
+            // Simulate email sending
+            await new Promise((resolve) => setTimeout(resolve, 1500));
 
-        // Update MedusaJS
-        await axios.post(`${MEDUSA_URL}/demo`, {
-            orderId,
-            status: "completed",
-            message: "Customer notified - Order complete!",
-        });
+            // Update MedusaJS
+            await updateMedusa(
+                orderId,
+                "completed",
+                "Customer notified - Order complete!"
+            );
 
-        console.log(`✅ Notification sent: ${orderId}`);
+            console.log(`✅ [${String(job.key)}] Notification sent: ${orderId}`);
 
-        return job.complete({
-            notificationSent: true,
-            sentAt: new Date().toISOString(),
-        });
+            return job.complete({
+                notificationSent: true,
+                sentAt: new Date().toISOString(),
+            });
+        } catch (error) {
+            console.error(
+                `❌ [${String(job.key)}] Notification sending failed:`,
+                {
+                    orderId,
+                    error: error instanceof Error ? error.message : String(error),
+                }
+            );
+
+            return job.fail({
+                errorMessage:
+                    error instanceof Error ? error.message : "Notification sending failed",
+                retries: 3,
+                retryBackOff: 5000,
+            });
+        }
     },
 });
 
 console.log("🤖 POC Workers started successfully!");
-console.log("Listening for tasks...");
+console.log(`📡 Connected to: ${process.env.ZEEBE_ADDRESS}`);
+console.log(`🔗 Medusa backend: ${MEDUSA_URL}`);
+console.log("👂 Listening for tasks...\n");
