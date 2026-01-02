@@ -13,6 +13,7 @@
     "medusa"
   ],
   "scripts": {
+    "workers": "ts-node src/workers/poc-workers.ts",
     "build": "medusa build",
     "seed": "medusa exec ./src/scripts/seed.ts",
     "start": "medusa start",

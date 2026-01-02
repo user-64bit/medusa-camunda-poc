@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:zeebe="http://camunda.org/schema/zeebe/1.0"
+  id="poc-definitions"
+  targetNamespace="http://camunda.io/schema/bpmn">
+
+  <bpmn:process id="order-fulfillment-poc"
+                name="Order Fulfillment POC"
+                isExecutable="true">
+
+    <bpmn:startEvent id="start" name="Order Placed">
+      <bpmn:outgoing>flow1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask id="verify-payment" name="Verify Payment">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="verify-payment" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow1</bpmn:incoming>
+      <bpmn:outgoing>flow2</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="reserve-inventory" name="Reserve Inventory">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="reserve-inventory" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow2</bpmn:incoming>
+      <bpmn:outgoing>flow3</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="send-notification" name="Send Notification">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="send-notification" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow3</bpmn:incoming>
+      <bpmn:outgoing>flow4</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="end" name="Order Complete">
+      <bpmn:incoming>flow4</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="flow1" sourceRef="start" targetRef="verify-payment" />
+    <bpmn:sequenceFlow id="flow2" sourceRef="verify-payment" targetRef="reserve-inventory" />
+    <bpmn:sequenceFlow id="flow3" sourceRef="reserve-inventory" targetRef="send-notification" />
+    <bpmn:sequenceFlow id="flow4" sourceRef="send-notification" targetRef="end" />
+
+  </bpmn:process>
+</bpmn:definitions>
