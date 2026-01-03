@@ -1,5 +1,9 @@
 import { Camunda8 } from "@camunda8/sdk";
 import axios, { AxiosError } from "axios";
+import * as dotenv from "dotenv";
+
+// Load environment variables from .env file
+dotenv.config();
 
 // Initialize Camunda8 SDK
 const camunda = new Camunda8({

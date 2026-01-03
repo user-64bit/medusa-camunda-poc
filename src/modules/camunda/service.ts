@@ -1,9 +1,13 @@
 import { MedusaService } from "@medusajs/framework/utils";
 import { Camunda8 } from "@camunda8/sdk";
+import * as dotenv from "dotenv";
+
+// Load environment variables
+dotenv.config();
 
 class CamundaService extends MedusaService({}) {
     private camunda: Camunda8;
-    private client: ReturnType<Camunda8["getOrchestrationClusterApiClientLoose"]>;
+    private client: ReturnType<Camunda8["getZeebeGrpcApiClient"]>;
 
     constructor({ logger }: any) {
         super(...arguments);
@@ -17,15 +21,15 @@ class CamundaService extends MedusaService({}) {
             ZEEBE_GRPC_ADDRESS: process.env.ZEEBE_ADDRESS,
         });
 
-        // Get the Orchestration Cluster API client (loose variant for easier migration)
-        this.client = this.camunda.getOrchestrationClusterApiClientLoose();
+        // Use Zeebe gRPC client (same as workers)
+        this.client = this.camunda.getZeebeGrpcApiClient();
     }
 
     async startOrderWorkflow(orderId: string) {
         console.log(`🚀 Starting workflow for order: ${orderId}`);
 
         const result = await this.client.createProcessInstance({
-            processDefinitionId: "order-fulfillment-poc",
+            bpmnProcessId: "order-fulfillment-poc",
             variables: {
                 orderId,
                 timestamp: new Date().toISOString(),
@@ -38,3 +42,4 @@ class CamundaService extends MedusaService({}) {
 }
 
 export default CamundaService;
+
