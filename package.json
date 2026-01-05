@@ -13,6 +13,7 @@
     "medusa"
   ],
   "scripts": {
+    "deploy-bpmn": "ts-node deploy-bpmn.ts",
     "workers": "ts-node src/workers/poc-workers.ts",
     "build": "medusa build",
     "seed": "medusa exec ./src/scripts/seed.ts",

@@ -9,8 +9,8 @@ class CamundaService extends MedusaService({}) {
     private camunda: Camunda8;
     private client: ReturnType<Camunda8["getZeebeGrpcApiClient"]>;
 
-    constructor({ logger }: any) {
-        super(...arguments);
+    constructor(container: any) {
+        super(container);
 
         // Initialize Camunda8 SDK
         this.camunda = new Camunda8({
