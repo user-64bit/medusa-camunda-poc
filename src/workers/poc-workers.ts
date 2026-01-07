@@ -91,7 +91,7 @@ client.createWorker({
             await slackNotifier.sendPaymentVerified(orderId);
 
             console.log(`✅ [${String(job.key)}] Payment verified: ${orderId}`);
-            console.log("\n\n job -->", job);
+
             return job.complete({
                 paymentVerified: true,
                 verifiedAt: new Date().toISOString(),
@@ -144,7 +144,6 @@ client.createWorker({
             await slackNotifier.sendInventoryReserved(orderId, "Mumbai");
 
             console.log(`✅ [${String(job.key)}] Inventory reserved: ${orderId}`);
-            console.log("\n\n job -->", job);
 
             return job.complete({
                 inventoryReserved: true,
@@ -199,7 +198,6 @@ client.createWorker({
             await slackNotifier.sendOrderCompleted(orderId);
 
             console.log(`✅ [${String(job.key)}] Notification sent: ${orderId}`);
-            console.log("\n\n job -->", job);
 
             return job.complete({
                 notificationSent: true,
