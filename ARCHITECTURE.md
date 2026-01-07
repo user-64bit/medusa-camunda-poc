@@ -345,6 +345,139 @@ client.createWorker({
   - `notificationSent` (boolean)
   - `sentAt` (string)
 
+### 1.3 Slack Integration Architecture
+
+The system implements Slack notifications at key workflow stages for real-time visibility.
+
+#### **A. Dual Implementation Architecture**
+
+Due to process separation (Medusa vs Workers), Slack integration uses two complementary implementations:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     SLACK NOTIFICATION ARCHITECTURE                      │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  MEDUSA PROCESS (npm run dev)         WORKER PROCESS (npm run workers) │
+│  ┌───────────────────────────┐        ┌───────────────────────────┐    │
+│  │ modules/slack/service.ts  │        │ workers/slack-notifier.ts │    │
+│  ├───────────────────────────┤        ├───────────────────────────┤    │
+│  │ - Notification Provider   │        │ - Direct Webhook Client   │    │
+│  │ - Rich order data access  │        │ - Lightweight stage msgs  │    │
+│  │ - Medusa DI integrated    │        │ - Error notifications     │    │
+│  │ - Template: order-created │        │ - Progress indicators     │    │
+│  └─────────────┬─────────────┘        └─────────────┬─────────────┘    │
+│                │                                    │                   │
+│                ▼                                    ▼                   │
+│         Slack Webhook ◄────────────────────────────►                   │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+| Aspect | `modules/slack/service.ts` | `workers/slack-notifier.ts` |
+|--------|---------------------------|----------------------------|
+| **Runs in** | Medusa process | Worker process |
+| **Access** | Full DI container, order module | Environment variables only |
+| **Data Available** | Items, totals, shipping, customer | Order ID only |
+| **Trigger** | Medusa workflow SDK | Direct function call |
+| **Use Case** | Rich order creation notification | Workflow progress updates |
+
+**Why Two Implementations?**
+Workers run via `ts-node src/workers/poc-workers.ts` as a separate Node.js process. They **cannot** access Medusa's DI container or resolve services like `orderModule`. Therefore, a standalone webhook client is required.
+
+#### **B. Slack Module Components**
+
+**1. Notification Provider (`src/modules/slack/service.ts`)**
+- **Purpose:** Medusa notification provider for rich order notifications
+- **Pattern:** Extends `AbstractNotificationProviderService`
+- **Registration:** Via `medusa-config.ts` notification providers
+- **Templates Supported:** `order-created`
+- **Features:**
+  - Order link with display ID
+  - Customer details (name, email)
+  - Shipping address
+  - Line items with thumbnails
+  - Subtotal, shipping, discounts, tax, total
+
+**2. Notification Workflow (`src/workflows/order-placed-notification.ts`)**
+- **Trigger:** Called from `order-placed.ts` subscriber
+- **Flow:**
+  1. Query order graph for full details
+  2. Call `sendNotificationsStep` with `channel: "slack"`
+  3. Slack module formats and sends webhook
+
+**3. Slack Notifier Utility (`src/workers/slack-notifier.ts`)**
+- **Purpose:** Standalone Slack client for workers
+- **Methods:**
+  - `sendPaymentVerified(orderId)` - Stage 1/3
+  - `sendInventoryReserved(orderId, warehouse)` - Stage 2/3
+  - `sendOrderCompleted(orderId)` - Stage 3/3
+  - `sendWorkflowError(orderId, stage, error)` - Error handling
+- **Features:**
+  - Rich block formatting
+  - Progress indicators
+  - Admin link integration
+  - Graceful failure (doesn't block workflow)
+
+#### **C. Notification Flow**
+
+```
+Order Placed Event
+       │
+       ├──► Subscriber calls orderPlacedNotificationWorkflow
+       │           │
+       │           ▼
+       │    Slack Module (service.ts)
+       │           │
+       │           ▼
+       │    📣 Slack: "Order #123 created"
+       │           └── Customer: John Doe
+       │           └── Items: 2x Widget ($99.00)
+       │           └── Total: $198.00
+       │
+       └──► Subscriber starts Camunda workflow
+                   │
+           ┌───────┴───────┐
+           │ verify-payment │
+           └───────┬───────┘
+                   │ ▼ slack-notifier.sendPaymentVerified()
+                   │ 📣 Slack: "💳 Payment Verified - Stage 1/3"
+                   │
+           ┌───────┴───────────┐
+           │ reserve-inventory │
+           └───────┬───────────┘
+                   │ ▼ slack-notifier.sendInventoryReserved()
+                   │ 📣 Slack: "📦 Inventory Reserved - Stage 2/3"
+                   │
+           ┌───────┴────────────┐
+           │ send-notification  │
+           └───────┬────────────┘
+                   │ ▼ slack-notifier.sendOrderCompleted()
+                   │ 📣 Slack: "🎉 Order Complete - Stage 3/3"
+                   │
+                   ▼
+              [Workflow End]
+```
+
+#### **D. Configuration**
+
+**Environment Variables:**
+```bash
+# Slack Integration
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T.../B.../xxx
+SLACK_ADMIN_URL=http://localhost:9000/app
+```
+
+**Setup Steps:**
+1. Create Slack App at [api.slack.com/apps](https://api.slack.com/apps)
+2. Enable Incoming Webhooks
+3. Add Webhook to desired channel (e.g., `#camunda-test`)
+4. Copy webhook URL to `.env`
+
+**Channel Configuration:**
+- The target channel is configured when creating the webhook in Slack, not in code
+- The `to` field in Medusa notification workflow is a routing identifier, not the Slack channel
+
 ---
 
 ## 2. Data Flow Analysis
@@ -1014,23 +1147,29 @@ The integration is **ready for controlled production rollout** with the security
 medusa-camunda-poc/
 ├── src/
 │   ├── modules/
-│   │   └── camunda/
-│   │       ├── index.ts           # Module registration (7 lines)
-│   │       └── service.ts         # CamundaService (46 lines)
+│   │   ├── camunda/
+│   │   │   ├── index.ts           # Module registration (7 lines)
+│   │   │   └── service.ts         # CamundaService (46 lines)
+│   │   └── slack/
+│   │       ├── index.ts           # Notification provider registration (10 lines)
+│   │       └── service.ts         # SlackNotificationProvider (150 lines)
 │   ├── subscribers/
-│   │   └── order-placed.ts        # Event subscriber (70 lines)
+│   │   └── order-placed.ts        # Event subscriber (79 lines)
 │   ├── workers/
-│   │   └── poc-workers.ts         # 3 workers (205 lines)
+│   │   ├── poc-workers.ts         # 3 Camunda workers (226 lines)
+│   │   └── slack-notifier.ts      # Slack utility for workers (172 lines)
+│   ├── workflows/
+│   │   └── order-placed-notification.ts  # Slack notification workflow (44 lines)
 │   ├── api/
 │   │   └── demo/
 │   │       └── route.ts           # Callback API (91 lines)
 │   └── order-fulfillment-poc.bpmn # BPMN definition (112 lines)
-├── medusa-config.ts               # Module configuration (22 lines)
+├── medusa-config.ts               # Module + Slack config (39 lines)
 ├── ecosystem.config.js            # PM2 config (28 lines)
 ├── package.json                   # Dependencies (55 lines)
 └── .env                           # Environment variables
 
-Total Effective Lines of Code: ~636
+Total Effective Lines of Code: ~1000+
 ```
 
 ---
@@ -1047,6 +1186,8 @@ Total Effective Lines of Code: ~636
 | `DATABASE_URL` | Database connection string | `postgres://...` | ✅ Yes |
 | `JWT_SECRET` | JWT signing secret | `supersecret` | ✅ Yes |
 | `COOKIE_SECRET` | Cookie signing secret | `supersecret` | ✅ Yes |
+| `SLACK_WEBHOOK_URL` | Slack incoming webhook | `https://hooks.slack.com/services/...` | ⚠️ Optional |
+| `SLACK_ADMIN_URL` | Admin URL for order links | `http://localhost:9000/app` | ⚠️ Optional |
 
 ---
 

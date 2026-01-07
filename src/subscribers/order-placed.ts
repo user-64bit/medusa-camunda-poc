@@ -2,6 +2,7 @@ import { SubscriberArgs } from "@medusajs/medusa";
 import { Modules } from "@medusajs/framework/utils";
 import CamundaService from "../modules/camunda/service";
 import { CAMUNDA_MODULE } from "../modules/camunda";
+import { orderPlacedNotificationWorkflow } from "../workflows/order-placed-notification";
 
 export default async function orderPlacedHandler({
     event: { data },
@@ -38,6 +39,14 @@ export default async function orderPlacedHandler({
         console.log(
             `✅ Workflow started successfully - Order: ${order.id}, Instance: ${workflow.processInstanceKey}`
         );
+
+        await orderPlacedNotificationWorkflow(container)
+            .run({
+                input: {
+                    id: order.id,
+                },
+            })
+
     } catch (error) {
         console.error(
             `❌ Failed to start workflow for order: ${orderId}`,

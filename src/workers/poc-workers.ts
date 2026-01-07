@@ -1,6 +1,7 @@
 import { Camunda8 } from "@camunda8/sdk";
 import axios, { AxiosError } from "axios";
 import * as dotenv from "dotenv";
+import { slackNotifier } from "./slack-notifier";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -86,8 +87,11 @@ client.createWorker({
                 "Payment verified successfully"
             );
 
-            console.log(`✅ [${String(job.key)}] Payment verified: ${orderId}`);
+            // Send Slack notification
+            await slackNotifier.sendPaymentVerified(orderId);
 
+            console.log(`✅ [${String(job.key)}] Payment verified: ${orderId}`);
+            console.log("\n\n job -->", job);
             return job.complete({
                 paymentVerified: true,
                 verifiedAt: new Date().toISOString(),
@@ -99,6 +103,13 @@ client.createWorker({
                     orderId,
                     error: error instanceof Error ? error.message : String(error),
                 }
+            );
+
+            // Notify Slack of error
+            await slackNotifier.sendWorkflowError(
+                orderId,
+                "Payment Verification",
+                error instanceof Error ? error.message : String(error)
             );
 
             return job.fail({
@@ -129,7 +140,11 @@ client.createWorker({
                 "Inventory reserved at Mumbai warehouse"
             );
 
+            // Send Slack notification
+            await slackNotifier.sendInventoryReserved(orderId, "Mumbai");
+
             console.log(`✅ [${String(job.key)}] Inventory reserved: ${orderId}`);
+            console.log("\n\n job -->", job);
 
             return job.complete({
                 inventoryReserved: true,
@@ -143,6 +158,13 @@ client.createWorker({
                     orderId,
                     error: error instanceof Error ? error.message : String(error),
                 }
+            );
+
+            // Notify Slack of error
+            await slackNotifier.sendWorkflowError(
+                orderId,
+                "Inventory Reservation",
+                error instanceof Error ? error.message : String(error)
             );
 
             return job.fail({
@@ -173,7 +195,11 @@ client.createWorker({
                 "Customer notified - Order complete!"
             );
 
+            // Send Slack notification
+            await slackNotifier.sendOrderCompleted(orderId);
+
             console.log(`✅ [${String(job.key)}] Notification sent: ${orderId}`);
+            console.log("\n\n job -->", job);
 
             return job.complete({
                 notificationSent: true,
@@ -186,6 +212,13 @@ client.createWorker({
                     orderId,
                     error: error instanceof Error ? error.message : String(error),
                 }
+            );
+
+            // Notify Slack of error
+            await slackNotifier.sendWorkflowError(
+                orderId,
+                "Customer Notification",
+                error instanceof Error ? error.message : String(error)
             );
 
             return job.fail({

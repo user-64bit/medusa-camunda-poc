@@ -17,5 +17,22 @@ module.exports = defineConfig({
     {
       resolve: "./src/modules/camunda",
     },
+    {
+      resolve: "@medusajs/medusa/notification",
+      options: {
+        providers: [
+          {
+            resolve: "./src/modules/slack",
+            id: "slack",
+            options: {
+              channels: ["slack"],
+              webhook_url: process.env.SLACK_WEBHOOK_URL,
+              admin_url: process.env.SLACK_ADMIN_URL,
+            },
+          },
+        ],
+      },
+    },
+
   ],
 })
