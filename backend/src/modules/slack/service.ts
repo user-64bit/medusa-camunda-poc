@@ -1,7 +1,6 @@
 import {
     AbstractNotificationProviderService,
     MedusaError,
-    Order,
 } from "@medusajs/framework/utils";
 import {
     OrderDTO,

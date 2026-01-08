@@ -1,14 +1,19 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { Modules } from "@medusajs/framework/utils";
 
-
 type UpdateRequestBody = {
     orderId: string;
     status: string;
     message?: string;
 };
 
-// Update order status from Camunda workers
+/**
+ * @deprecated This endpoint is deprecated and will be removed in a future version.
+ * Use POST /store/orders/:id/workflow-update instead.
+ * 
+ * This legacy endpoint exists for backward compatibility with older worker versions.
+ * New implementations should use the proper REST endpoint.
+ */
 export async function POST(req: MedusaRequest<UpdateRequestBody>, res: MedusaResponse) {
     try {
         const { orderId, status, message } = req.body;
@@ -76,10 +81,14 @@ export async function POST(req: MedusaRequest<UpdateRequestBody>, res: MedusaRes
     }
 }
 
-// Health check
+/**
+ * @deprecated This endpoint is deprecated. Use /health for health checks.
+ * Kept for backward compatibility.
+ */
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
     return res.json({
-        status: "POC API ready",
+        status: "POC API ready (deprecated - use /health)",
         timestamp: new Date().toISOString(),
+        notice: "This endpoint is deprecated. Use /store/orders/:id/workflow-update for workflow updates.",
     });
 }

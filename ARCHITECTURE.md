@@ -171,14 +171,13 @@ export default Module(CAMUNDA_MODULE, {
   }
   ```
 
-**4. Demo API Route (`src/api/demo/route.ts`)**
-- **Endpoints:**
-  - `POST /demo` - Receive workflow status updates from workers
-  - `GET /demo` - Health check endpoint
+**4. Workflow Update API (`src/api/store/orders/[id]/workflow-update/route.ts`)**
+- **Endpoint:** `POST /store/orders/:id/workflow-update`
+- **Purpose:** Receive workflow status updates from Camunda workers
 - **Validation:**
-  - Type checking for orderId and status
+  - Order ID from URL params
+  - Status type checking
   - Order existence verification
-  - Input sanitization
 - **Business Logic:**
   - Updates order metadata with workflow status
   - Sets order status to "completed" on final step
@@ -188,8 +187,17 @@ export default Module(CAMUNDA_MODULE, {
   - 404: Order not found
   - 500: Internal server error
 - **Security Considerations:**
-  - ⚠️ Currently no authentication (POC-only)
-  - Should add API key or OAuth in production
+  - ⚠️ Currently no authentication (development)
+  - Production should add API key validation
+
+**5. Workflow Status API (`src/api/store/orders/[id]/workflow-status/route.ts`)**
+- **Endpoint:** `GET /store/orders/:id/workflow-status`
+- **Purpose:** Return current workflow status for customer-facing UI
+- **Response:** Includes steps, progress percentage, and error info
+
+**Legacy: Demo API Route (`src/api/demo/route.ts`) - DEPRECATED**
+- Workers first try the new endpoint, then fall back to `/demo`
+- Will be removed in a future version
 
 #### **B. Workers Components**
 
@@ -1144,32 +1152,39 @@ The integration is **ready for controlled production rollout** with the security
 ## Appendix A: File Structure
 
 ```
-medusa-camunda-poc/
+medusa-camunda-poc/backend/
 ├── src/
 │   ├── modules/
 │   │   ├── camunda/
-│   │   │   ├── index.ts           # Module registration (7 lines)
-│   │   │   └── service.ts         # CamundaService (46 lines)
+│   │   │   ├── index.ts           # Module registration
+│   │   │   └── service.ts         # CamundaService
 │   │   └── slack/
-│   │       ├── index.ts           # Notification provider registration (10 lines)
-│   │       └── service.ts         # SlackNotificationProvider (150 lines)
+│   │       ├── index.ts           # Notification provider registration
+│   │       └── service.ts         # SlackNotificationProvider
 │   ├── subscribers/
-│   │   └── order-placed.ts        # Event subscriber (79 lines)
+│   │   └── order-placed.ts        # Event subscriber
 │   ├── workers/
-│   │   ├── poc-workers.ts         # 3 Camunda workers (226 lines)
-│   │   └── slack-notifier.ts      # Slack utility for workers (172 lines)
+│   │   ├── poc-workers.ts         # 3 Camunda workers
+│   │   └── slack-notifier.ts      # Slack utility for workers
 │   ├── workflows/
-│   │   └── order-placed-notification.ts  # Slack notification workflow (44 lines)
+│   │   └── order-placed-notification.ts  # Slack notification workflow
 │   ├── api/
-│   │   └── demo/
-│   │       └── route.ts           # Callback API (91 lines)
-│   └── order-fulfillment-poc.bpmn # BPMN definition (112 lines)
-├── medusa-config.ts               # Module + Slack config (39 lines)
-├── ecosystem.config.js            # PM2 config (28 lines)
-├── package.json                   # Dependencies (55 lines)
-└── .env                           # Environment variables
+│   │   ├── demo/
+│   │   │   └── route.ts           # Legacy callback API (deprecated)
+│   │   └── store/orders/[id]/
+│   │       ├── workflow-status/   # GET workflow status
+│   │       │   └── route.ts
+│   │       └── workflow-update/   # POST workflow updates
+│   │           └── route.ts
+│   ├── admin/
+│   │   └── widgets/
+│   │       └── workflow-status.tsx # Admin order workflow widget
+│   └── order-fulfillment-poc.bpmn # BPMN definition
+├── medusa-config.ts               # Module + Slack config
+├── ecosystem.config.js            # PM2 config
+└── package.json                   # Dependencies
 
-Total Effective Lines of Code: ~1000+
+Note: Line counts omitted as they change frequently during development.
 ```
 
 ---

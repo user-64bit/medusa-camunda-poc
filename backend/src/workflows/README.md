@@ -1,81 +1,82 @@
-# Custom Workflows
+# Medusa Workflows
 
-A workflow is a series of queries and actions that complete a task.
+This directory contains Medusa workflows that orchestrate complex business operations.
 
-The workflow is created in a TypeScript or JavaScript file under the `src/workflows` directory.
+## Workflows
 
-> Learn more about workflows in [this documentation](https://docs.medusajs.com/learn/fundamentals/workflows).
+### Order Placed Notification (`order-placed-notification.ts`)
 
-For example:
+Sends a Slack notification when an order is placed.
 
-```ts
+**Workflow ID:** `order-placed-notification`
+
+**Input:**
+```typescript
+{
+  id: string  // Order ID
+}
+```
+
+**Flow:**
+1. Query order graph for full order details (items, addresses, totals)
+2. Send notification via Slack notification provider
+
+**Usage:**
+```typescript
+import { orderPlacedNotificationWorkflow } from "../workflows/order-placed-notification";
+
+await orderPlacedNotificationWorkflow(container).run({
+  input: { id: orderId },
+});
+```
+
+**Dependencies:**
+- `useQueryGraphStep` - Fetches order with all related data
+- `sendNotificationsStep` - Sends to configured notification channels
+
+**Data Retrieved:**
+- Order ID and display ID
+- Customer email
+- Shipping address
+- Item details with thumbnails
+- Subtotal, shipping, tax, discounts, total
+- Currency code
+
+## Note on Camunda vs Medusa Workflows
+
+This project uses **both** Camunda and Medusa workflows for different purposes:
+
+| Aspect | Medusa Workflows | Camunda Workflows |
+|--------|------------------|-------------------|
+| **Use Case** | In-process operations | Long-running orchestration |
+| **Duration** | Milliseconds to seconds | Seconds to days |
+| **External Systems** | No | Yes |
+| **Visibility** | Logs | Operate UI |
+| **Human Tasks** | No | Yes |
+
+**Medusa workflows** (this directory) handle quick in-process tasks like sending notifications.
+
+**Camunda workflows** (via `poc-workers.ts`) handle the order fulfillment orchestration with external system coordination, retries, and long-running processes.
+
+## Adding New Workflows
+
+```typescript
 import {
-  createStep,
   createWorkflow,
   WorkflowResponse,
-  StepResponse,
-} from "@medusajs/framework/workflows-sdk"
-
-const step1 = createStep("step-1", async () => {
-  return new StepResponse(`Hello from step one!`)
-})
+} from "@medusajs/framework/workflows-sdk";
 
 type WorkflowInput = {
-  name: string
-}
+  name: string;
+};
 
-const step2 = createStep(
-  "step-2",
-  async ({ name }: WorkflowInput) => {
-    return new StepResponse(`Hello ${name} from step two!`)
-  }
-)
-
-type WorkflowOutput = {
-  message1: string
-  message2: string
-}
-
-const helloWorldWorkflow = createWorkflow(
-  "hello-world",
+export const myWorkflow = createWorkflow(
+  "my-workflow-id",
   (input: WorkflowInput) => {
-    const greeting1 = step1()
-    const greeting2 = step2(input)
-    
-    return new WorkflowResponse({
-      message1: greeting1,
-      message2: greeting2
-    })
+    // Define workflow steps
+    return new WorkflowResponse({ success: true });
   }
-)
-
-export default helloWorldWorkflow
+);
 ```
 
-## Execute Workflow
-
-You can execute the workflow from other resources, such as API routes, scheduled jobs, or subscribers.
-
-For example, to execute the workflow in an API route:
-
-```ts
-import type {
-  MedusaRequest,
-  MedusaResponse,
-} from "@medusajs/framework"
-import myWorkflow from "../../../workflows/hello-world"
-
-export async function GET(
-  req: MedusaRequest,
-  res: MedusaResponse
-) {
-  const { result } = await myWorkflow(req.scope)
-    .run({
-      input: {
-        name: req.query.name as string,
-      },
-    })
-
-  res.send(result)
-}
-```
+For more information, see the [Medusa Workflows documentation](https://docs.medusajs.com/learn/fundamentals/workflows).

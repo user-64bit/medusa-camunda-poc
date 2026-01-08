@@ -1,16 +1,25 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { Modules } from "@medusajs/framework/utils";
 
+/**
+ * Workflow step definitions for order fulfillment process.
+ * These steps correspond to the Camunda BPMN workflow stages.
+ */
 const WORKFLOW_STEPS = [
   { key: "started", name: "Order Received", description: "Your order has been received and is being processed" },
   { key: "payment_verified", name: "Payment Confirmed", description: "Payment has been verified successfully" },
   { key: "inventory_reserved", name: "Items Reserved", description: "Inventory has been reserved for your order" },
   { key: "completed", name: "Order Complete", description: "Your order is complete and ready for shipping" },
-];
+] as const;
+
+type WorkflowStepKey = typeof WORKFLOW_STEPS[number]["key"];
 
 /**
  * GET /store/orders/:id/workflow-status
- * Returns the Camunda workflow status for a specific order
+ * Returns the Camunda workflow status for a specific order.
+ * 
+ * This endpoint is used by the frontend to display real-time
+ * order progress to customers.
  */
 export async function GET(
   req: MedusaRequest,

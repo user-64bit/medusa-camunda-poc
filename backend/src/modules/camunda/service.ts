@@ -1,15 +1,22 @@
 import { MedusaService } from "@medusajs/framework/utils";
+import { MedusaContainer } from "@medusajs/framework/types";
 import { Camunda8 } from "@camunda8/sdk";
 import * as dotenv from "dotenv";
 
-// Load environment variables
+// Load environment variables for Camunda SDK configuration
 dotenv.config();
 
+/**
+ * CamundaService - Medusa module for Camunda workflow orchestration
+ * 
+ * This service provides integration with Camunda Cloud for order fulfillment
+ * workflow management. It uses the Zeebe gRPC client for process instance creation.
+ */
 class CamundaService extends MedusaService({}) {
     private camunda: Camunda8;
     private client: ReturnType<Camunda8["getZeebeGrpcApiClient"]>;
 
-    constructor(container: any) {
+    constructor(container: MedusaContainer) {
         super(container);
 
         // Initialize Camunda8 SDK

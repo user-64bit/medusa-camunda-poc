@@ -110,10 +110,10 @@ medusa-camunda-poc/               # Monorepo root
 │   │   │   ├── poc-workers.ts    # Camunda task workers
 │   │   │   └── slack-notifier.ts # Worker Slack utility
 │   │   ├── api/
-│   │   │   ├── demo/             # Legacy POC endpoint
+│   │   │   ├── demo/             # Legacy endpoint (deprecated)
 │   │   │   └── store/orders/[id]/
 │   │   │       ├── workflow-status/  # GET workflow status
-│   │   │       └── workflow-update/  # POST workflow updates
+│   │   │       └── workflow-update/  # POST workflow updates (use this)
 │   │   ├── workflows/
 │   │   │   └── order-placed-notification.ts
 │   │   ├── admin/widgets/

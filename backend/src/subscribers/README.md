@@ -1,61 +1,71 @@
-# Custom subscribers
+# Event Subscribers
 
-Subscribers handle events emitted in the Medusa application.
+This directory contains event subscribers that react to Medusa events.
 
-> Learn more about Subscribers in [this documentation](https://docs.medusajs.com/learn/fundamentals/events-and-subscribers).
+## Subscribers
 
-The subscriber is created in a TypeScript or JavaScript file under the `src/subscribers` directory.
+### Order Placed Subscriber (`order-placed.ts`)
 
-For example, create the file `src/subscribers/product-created.ts` with the following content:
+Triggers when an order is placed (completed from cart).
 
-```ts
-import {
-  type SubscriberConfig,
-} from "@medusajs/framework"
+**Event:** `order.placed`
 
-// subscriber function
-export default async function productCreateHandler() {
-  console.log("A product was created")
-}
+**Actions:**
+1. Retrieves the order from the order module
+2. Starts a Camunda workflow via `CamundaService`
+3. Updates order metadata with workflow instance ID
+4. Triggers Slack notification via `orderPlacedNotificationWorkflow`
 
-// subscriber config
-export const config: SubscriberConfig = {
-  event: "product.created",
+**Flow:**
+```
+Order Completed → order.placed event
+    ↓
+Order Retrieved from DB
+    ↓
+Camunda Workflow Started
+    ↓
+Order Metadata Updated:
+  - workflow_instance
+  - workflow_started_at
+  - workflow_status: "started"
+    ↓
+Slack Notification Sent
+```
+
+**Error Handling:**
+- On workflow failure, error details are stored in order metadata
+- Errors are logged with structured context
+- Error is re-thrown for visibility in logs
+
+**Metadata Stored:**
+```typescript
+{
+  workflow_instance: string,      // Camunda instance key
+  workflow_started_at: string,    // ISO timestamp
+  workflow_status: "started" | "error",
+  workflow_error?: string,        // On failure
+  workflow_error_at?: string,     // On failure
 }
 ```
 
-A subscriber file must export:
+## Adding New Subscribers
 
-- The subscriber function that is an asynchronous function executed whenever the associated event is triggered.
-- A configuration object defining the event this subscriber is listening to.
+Create a new TypeScript file in this directory:
 
-## Subscriber Parameters
+```typescript
+import { SubscriberArgs, SubscriberConfig } from "@medusajs/framework";
 
-A subscriber receives an object having the following properties:
-
-- `event`: An object holding the event's details. It has a `data` property, which is the event's data payload.
-- `container`: The Medusa container. Use it to resolve modules' main services and other registered resources.
-
-```ts
-import type {
-  SubscriberArgs,
-  SubscriberConfig,
-} from "@medusajs/framework"
-
-export default async function productCreateHandler({
+export default async function myEventHandler({
   event: { data },
   container,
 }: SubscriberArgs<{ id: string }>) {
-  const productId = data.id
-
-  const productModuleService = container.resolve("product")
-
-  const product = await productModuleService.retrieveProduct(productId)
-
-  console.log(`The product ${product.title} was created`)
+  // Handle the event
+  console.log("Event received:", data);
 }
 
 export const config: SubscriberConfig = {
-  event: "product.created",
-}
+  event: "event.name",
+};
 ```
+
+For more information, see the [Medusa Events documentation](https://docs.medusajs.com/learn/fundamentals/events-and-subscribers).

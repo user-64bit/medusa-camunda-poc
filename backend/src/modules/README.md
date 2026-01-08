@@ -1,117 +1,73 @@
-# Custom Module
+# Custom Modules
 
-A module is a package of reusable functionalities. It can be integrated into your Medusa application without affecting the overall system. You can create a module as part of a plugin.
+This directory contains custom Medusa modules that extend the platform's functionality.
 
-> Learn more about modules in [this documentation](https://docs.medusajs.com/learn/fundamentals/modules).
+## Modules
 
-To create a module:
+### Camunda Module (`./camunda/`)
 
-## 1. Create a Data Model
+Provides Camunda Cloud workflow orchestration integration.
 
-A data model represents a table in the database. You create a data model in a TypeScript or JavaScript file under the `models` directory of a module.
+**Service:** `CamundaService`
+**Module Key:** `camundaService`
 
-For example, create the file `src/modules/blog/models/post.ts` with the following content:
+**Features:**
+- Initialize Camunda8 SDK with OAuth2 credentials
+- Create Zeebe gRPC client for process instance management
+- Start order fulfillment workflows
 
-```ts
-import { model } from "@medusajs/framework/utils"
+**Usage:**
+```typescript
+import CamundaService from "../modules/camunda/service";
+import { CAMUNDA_MODULE } from "../modules/camunda";
 
-const Post = model.define("post", {
-  id: model.id().primaryKey(),
-  title: model.text(),
-})
-
-export default Post
+// In API route or subscriber
+const camundaService = container.resolve<CamundaService>(CAMUNDA_MODULE);
+const workflow = await camundaService.startOrderWorkflow(orderId);
 ```
 
-## 2. Create a Service
+**Configuration:**
+Requires the following environment variables:
+- `ZEEBE_CLIENT_ID` - OAuth2 client ID
+- `ZEEBE_CLIENT_SECRET` - OAuth2 client secret
+- `ZEEBE_ADDRESS` - Cluster endpoint (e.g., `cluster.zeebe.camunda.io:443`)
+- `ZEEBE_TOKEN_AUDIENCE` - Token audience (default: `zeebe.camunda.io`)
 
-A module must define a service. A service is a TypeScript or JavaScript class holding methods related to a business logic or commerce functionality.
+### Slack Module (`./slack/`)
 
-For example, create the file `src/modules/blog/service.ts` with the following content:
+Provides Slack notification integration via the Medusa notification provider system.
 
-```ts
-import { MedusaService } from "@medusajs/framework/utils"
-import Post from "./models/post"
+**Service:** `SlackNotificationProviderService`
+**Provider ID:** `slack`
 
-class BlogModuleService extends MedusaService({
-  Post,
-}){
-}
+**Features:**
+- Send rich order creation notifications to Slack
+- Format order details with items, pricing, and customer info
+- Support for webhook-based delivery
 
-export default BlogModuleService
-```
-
-## 3. Export Module Definition
-
-A module must have an `index.ts` file in its root directory that exports its definition. The definition specifies the main service of the module.
-
-For example, create the file `src/modules/blog/index.ts` with the following content:
-
-```ts
-import BlogModuleService from "./service"
-import { Module } from "@medusajs/framework/utils"
-
-export const BLOG_MODULE = "blog"
-
-export default Module(BLOG_MODULE, {
-  service: BlogModuleService,
-})
-```
-
-## 4. Add Module to Medusa's Configurations
-
-To start using the module, add it to `medusa-config.ts`:
-
-```ts
-module.exports = defineConfig({
-  projectConfig: {
-    // ...
+**Configuration:**
+Set in `medusa-config.ts` under notification providers:
+```typescript
+{
+  resolve: "./src/modules/slack",
+  id: "slack",
+  options: {
+    channels: ["slack"],
+    webhook_url: process.env.SLACK_WEBHOOK_URL,
+    admin_url: process.env.SLACK_ADMIN_URL,
   },
-  modules: [
-    {
-      resolve: "./src/modules/blog",
-    },
-  ],
-})
-```
-
-## 5. Generate and Run Migrations
-
-To generate migrations for your module, run the following command:
-
-```bash
-npx medusa db:generate blog
-```
-
-Then, to run migrations, run the following command:
-
-```bash
-npx medusa db:migrate
-```
-
-## Use Module
-
-You can use the module in customizations within the Medusa application, such as workflows and API routes.
-
-For example, to use the module in an API route:
-
-```ts
-import { MedusaRequest, MedusaResponse } from "@medusajs/framework"
-import BlogModuleService from "../../../modules/blog/service"
-import { BLOG_MODULE } from "../../../modules/blog"
-
-export async function GET(
-  req: MedusaRequest,
-  res: MedusaResponse
-): Promise<void> {
-  const blogModuleService: BlogModuleService = req.scope.resolve(
-    BLOG_MODULE
-  )
-
-  const posts = await blogModuleService.listPosts()
-
-  res.json({
-    posts
-  })
 }
 ```
+
+**Supported Templates:**
+- `order-created` - Sends detailed order notification with items and totals
+
+## Adding New Modules
+
+1. Create a new directory under `src/modules/`
+2. Create `service.ts` with your service class extending `MedusaService`
+3. Create `index.ts` exporting the module definition
+4. Add to `medusa-config.ts` modules array
+5. Run `npx medusa db:migrate` if the module has data models
+
+For more information, see the [Medusa Modules documentation](https://docs.medusajs.com/learn/fundamentals/modules).

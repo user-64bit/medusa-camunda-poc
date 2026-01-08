@@ -13,7 +13,7 @@
     "medusa",
     "camunda",
     "workflow",
-    "workflow"
+    "orchestration"
   ],
   "scripts": {
     "deploy-bpmn": "ts-node deploy-bpmn.ts",
