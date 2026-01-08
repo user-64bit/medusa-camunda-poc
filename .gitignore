@@ -1,21 +1,5 @@
-/dist
-.env
-.DS_Store
-/uploads
-/node_modules
-yarn-error.log
-
-.idea
-
-coverage
-
-!src/**
-
-./tsconfig.tsbuildinfo
-medusa-db.sql
-build
-.cache
-
+# Dependencies
+node_modules/
 .yarn/*
 !.yarn/patches
 !.yarn/plugins
@@ -23,4 +7,42 @@ build
 !.yarn/sdks
 !.yarn/versions
 
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+/dist
+build
+.cache
 .medusa
+
+# Backend specific
+backend/.medusa
+backend/uploads
+
+# Frontend specific
+frontend/.next
+frontend/out
+
+# IDE
+.idea
+.vscode/*
+!.vscode/settings.json
+
+# OS
+.DS_Store
+
+# Logs
+yarn-error.log
+*.log
+
+# Testing
+coverage
+
+# Database
+medusa-db.sql
+
+# TypeScript
+./tsconfig.tsbuildinfo
