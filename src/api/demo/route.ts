@@ -8,12 +8,6 @@ type UpdateRequestBody = {
     message?: string;
 };
 
-const VALID_STATUSES = [
-    "payment_verified",
-    "inventory_reserved",
-    "completed",
-] as const;
-
 // Update order status from Camunda workers
 export async function POST(req: MedusaRequest<UpdateRequestBody>, res: MedusaResponse) {
     try {
