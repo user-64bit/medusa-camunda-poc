@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Package, ArrowRight } from "lucide-react";
+import { CheckCircle, Package, ArrowRight, Zap, ShieldCheck, Truck } from "lucide-react";
 
 interface SuccessPageProps {
   searchParams: Promise<{ order_id?: string }>;
@@ -15,88 +15,84 @@ export default async function CheckoutSuccessPage({ searchParams }: SuccessPageP
   const { order_id } = await searchParams;
 
   return (
-    <div className="container py-16">
-      <div className="max-w-lg mx-auto text-center">
-        <div className="mx-auto h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mb-6">
-          <CheckCircle className="h-10 w-10 text-green-600" />
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-12 px-4">
+      {/* Background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-success/5 via-background to-background" />
+      <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-success/10 rounded-full blur-3xl" />
+      
+      <div className="relative w-full max-w-lg text-center">
+        {/* Success Icon */}
+        <div className="relative mx-auto h-24 w-24 mb-8">
+          <div className="absolute inset-0 rounded-full bg-success/20 animate-ping" />
+          <div className="relative h-24 w-24 rounded-full bg-success flex items-center justify-center shadow-lg shadow-success/30">
+            <CheckCircle className="h-12 w-12 text-success-foreground" />
+          </div>
         </div>
 
-        <h1 className="text-2xl font-bold tracking-tight mb-2">
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">
           Order Confirmed!
         </h1>
-        <p className="text-muted-foreground mb-8">
-          Thank you for your purchase. Your order has been placed successfully
-          and is now being processed.
+        <p className="text-muted-foreground text-lg mb-8 max-w-md mx-auto">
+          Thank you for your purchase. Your order is now being processed by our workflow system.
         </p>
 
         {order_id && (
-          <div className="p-4 rounded-lg bg-muted mb-8">
-            <p className="text-sm text-muted-foreground">Order ID</p>
-            <p className="font-mono text-sm">{order_id}</p>
+          <div className="p-4 rounded-xl bg-secondary/50 border border-border mb-8 inline-block">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Order ID</p>
+            <p className="font-mono text-sm font-medium">{order_id}</p>
           </div>
         )}
 
-        <div className="p-6 rounded-lg border border-border bg-background mb-8">
-          <div className="flex items-center gap-4 text-left">
-            <div className="h-12 w-12 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
+        {/* Workflow Preview */}
+        <div className="p-6 rounded-2xl border border-border bg-secondary/30 mb-8">
+          <div className="flex items-center gap-4 text-left mb-6">
+            <div className="h-12 w-12 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
               <Package className="h-6 w-6 text-accent" />
             </div>
             <div>
-              <p className="font-medium">Track Your Order</p>
+              <p className="font-semibold">Real-Time Tracking</p>
               <p className="text-sm text-muted-foreground">
-                You can track your order status in real-time through your account.
-                Our Camunda workflow will process your order through payment
-                verification, inventory reservation, and shipping.
+                Track your order through our Camunda-powered workflow
               </p>
             </div>
           </div>
+
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { step: 1, icon: Package, label: "Received", active: true },
+              { step: 2, icon: ShieldCheck, label: "Payment", active: false },
+              { step: 3, icon: Truck, label: "Reserved", active: false },
+              { step: 4, icon: Zap, label: "Complete", active: false },
+            ].map((item) => (
+              <div key={item.step} className="text-center">
+                <div className={`h-10 w-10 mx-auto rounded-lg flex items-center justify-center mb-2 ${
+                  item.active 
+                    ? "bg-accent text-accent-foreground" 
+                    : "bg-muted text-muted-foreground"
+                }`}>
+                  <item.icon className="h-5 w-5" />
+                </div>
+                <p className="text-xs text-muted-foreground">{item.label}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
+        {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           {order_id && (
             <Link href={`/account/orders/${order_id}`}>
-              <Button>
-                View Order
-                <ArrowRight className="ml-2 h-4 w-4" />
+              <Button size="lg" className="w-full sm:w-auto">
+                Track Order
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
           )}
           <Link href="/products">
-            <Button variant="outline">Continue Shopping</Button>
+            <Button size="lg" variant="outline" className="w-full sm:w-auto">
+              Continue Shopping
+            </Button>
           </Link>
-        </div>
-
-        <div className="mt-12 pt-8 border-t border-border">
-          <h2 className="font-semibold mb-4">What happens next?</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
-            <div className="p-4 rounded-lg bg-muted/50">
-              <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm mb-2">
-                1
-              </div>
-              <p className="font-medium text-sm">Payment Verified</p>
-              <p className="text-xs text-muted-foreground">
-                Your payment is being verified
-              </p>
-            </div>
-            <div className="p-4 rounded-lg bg-muted/50">
-              <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm mb-2">
-                2
-              </div>
-              <p className="font-medium text-sm">Items Reserved</p>
-              <p className="text-xs text-muted-foreground">
-                Inventory is reserved for you
-              </p>
-            </div>
-            <div className="p-4 rounded-lg bg-muted/50">
-              <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm mb-2">
-                3
-              </div>
-              <p className="font-medium text-sm">Order Complete</p>
-              <p className="text-xs text-muted-foreground">
-                You&apos;ll receive a confirmation
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

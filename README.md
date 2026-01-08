@@ -1,6 +1,6 @@
 # Medusa-Camunda E-commerce Platform V1
 
-**Status:** ✅ **Production Ready** | **Version:** 1.0 | **Updated:** January 8, 2026
+**Version:** 1.0
 
 A complete e-commerce platform with MedusaJS v2 backend, Next.js storefront, Camunda Cloud workflow orchestration, and Slack notifications.
 

@@ -42,13 +42,14 @@ export async function getCustomer() {
 
 export async function login(email: string, password: string) {
   try {
-    const { token } = await medusa.auth.login("customer", "emailpass", {
+    const result = await medusa.auth.login("customer", "emailpass", {
       email,
       password,
     });
     
-    if (token) {
-      await setAuthToken(token);
+    // Result can be a token string or { location: string } for OAuth redirects
+    if (typeof result === "string") {
+      await setAuthToken(result);
       return { success: true };
     }
     
@@ -70,13 +71,14 @@ export async function register(data: {
 }) {
   try {
     // First, register the auth identity
-    const { token } = await medusa.auth.register("customer", "emailpass", {
+    const result = await medusa.auth.register("customer", "emailpass", {
       email: data.email,
       password: data.password,
     });
 
-    if (token) {
-      await setAuthToken(token);
+    // Result can be a token string or { location: string } for OAuth redirects
+    if (typeof result === "string") {
+      await setAuthToken(result);
       
       // Then create the customer profile
       await medusa.store.customer.create(
@@ -86,7 +88,7 @@ export async function register(data: {
           last_name: data.last_name,
         },
         {},
-        { Authorization: `Bearer ${token}` }
+        { Authorization: `Bearer ${result}` }
       );
       
       return { success: true };
